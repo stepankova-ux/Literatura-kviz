@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Literatura – procvičování</title>
+<style>
+:root{--bg:#f6f4ee;--card:#fff;--text:#1f2430;--muted:#667;--accent:#3b5bdb;--ok:#2b8a3e;--okbg:#e6f4ea;--bad:#c92a2a;--badbg:#fdeaea;--line:#d9d6cc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16181d;--card:#20242c;--text:#e8e9ee;--muted:#9aa0ae;--accent:#7c93f5;--ok:#69db7c;--okbg:#1d3326;--bad:#ff8787;--badbg:#3a2022;--line:#343a46;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#16181d;--card:#20242c;--text:#e8e9ee;--muted:#9aa0ae;--accent:#7c93f5;--ok:#69db7c;--okbg:#1d3326;--bad:#ff8787;--badbg:#3a2022;--line:#343a46;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Georgia,"Times New Roman",serif;line-height:1.5}
+main{max-width:660px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.4rem;margin:0 0 4px}
+.sub{color:var(--muted);font-family:system-ui,sans-serif;font-size:.9rem;margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+label{display:block;font-family:system-ui,sans-serif;font-size:.85rem;color:var(--muted);margin:12px 0 4px}
+input,select{width:100%;font:inherit;font-size:1rem;color:var(--text);background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:10px 12px}
+.meta{display:flex;justify-content:space-between;font-family:system-ui,sans-serif;font-size:.85rem;color:var(--muted);margin-bottom:10px}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-bottom:16px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.q{font-size:1.15rem;margin:0 0 16px}
+.opt{display:block;width:100%;text-align:left;font:inherit;font-size:1rem;color:var(--text);background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt:disabled{cursor:default}
+.opt.ok{border-color:var(--ok);background:var(--okbg)}
+.opt.bad{border-color:var(--bad);background:var(--badbg)}
+.btn{font:inherit;font-family:system-ui,sans-serif;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:11px 20px;cursor:pointer;font-size:1rem;margin:10px 8px 0 0}
+.btn.sec{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+.fb{font-family:system-ui,sans-serif;margin:6px 0 4px;font-weight:600}
+.ex{font-family:system-ui,sans-serif;font-size:.9rem;color:var(--muted);margin:0 0 8px}
+.big{font-size:2.2rem;margin:8px 0}
+.note{font-family:system-ui,sans-serif;font-size:.85rem;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:.85rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+.wrap{overflow-x:auto}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>Literatura – procvičování</h1>
+<p class="sub">Otázky se losují náhodně z databáze.</p>
+
+<div class="card" id="start">
+  <label for="name">Tvoje jméno a třída</label>
+  <input id="name" maxlength="60" placeholder="např. Jana Nováková, 4.A" autocomplete="name">
+  <label for="cat">Okruh</label>
+  <select id="cat"></select>
+  <label for="cnt">Počet otázek</label>
+  <select id="cnt"><option value="10">10</option><option value="20">20</option><option value="0">Všechny</option></select>
+  <div id="err" class="note" style="color:var(--bad)"></div>
+  <button class="btn" onclick="start()">Začít</button>
+</div>
+
+<div class="card hide" id="quiz">
+  <div class="meta"><span id="num"></span><span id="score"></span></div>
+  <div class="bar"><i id="prog"></i></div>
+  <p class="q" id="qtext"></p>
+  <div id="opts"></div>
+  <div class="fb" id="fb"></div>
+  <p class="ex" id="ex"></p>
+  <button class="btn hide" id="next" onclick="next()">Další otázka</button>
+</div>
+
+<div class="card hide" id="end">
+  <p class="q">Hotovo, <span id="who"></span>!</p>
+  <div class="big" id="final"></div>
+  <p id="saved" class="note"></p>
+  <button class="btn" onclick="start()">Znovu</button>
+  <button class="btn sec" onclick="show('start')">Zpět na začátek</button>
+</div>
+
+</main>
+
+<script>
+/* ===== NASTAVENÍ =====
+   Sem vlož adresu webové aplikace z Google Apps Script (viz README.md).
+   Když zůstane prázdná, výsledek se žákovi jen zobrazí. */
+const SHEETS_URL = "";
+
+const DB = [
+{
+"q": "Který autor je spojován s eposem Iliada a Odysseia?",
+"o": [
+"Homér",
+"Ovidius",
+"Vergilius",
+"Dante Alighieri"
+],
+"a": "Homér",
+"e": "Homér je tradičně považován za autora Iliady a Odysseie.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Který autor napsal Proměny (Metamorfózy)?",
+"o": [
+"Ezop",
+"Ovidius",
+"Sofokles",
+"Francesco Petrarca"
+],
+"a": "Ovidius",
+"e": "Proměny jsou dílem římského básníka Ovidia.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Kdo je autorem bajek, v nichž často vystupují zvířata s lidskými vlastnostmi?",
+"o": [
+"Ezop",
+"Homér",
+"Molière",
+"Voltaire"
+],
+"a": "Ezop",
+"e": "Ezop je tradičně spojován s antickými bajkami.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Který autor napsal tragédii Antigona?",
+"o": [
+"Sofokles",
+"Euripidés",
+"Molière",
+"William Shakespeare"
+],
+"a": "Sofokles",
+"e": "Antigona je tragédie starořeckého dramatika Sofokla.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Kdo je autorem Božské komedie?",
+"o": [
+"Dante Alighieri",
+"Francesco Petrarca",
+"Giovanni Boccaccio",
+"Miguel de Cervantes"
+],
+"a": "Dante Alighieri",
+"e": "Božská komedie je rozsáhlá veršovaná skladba Danteho Alighieriho.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Který autor napsal Dekameron?",
+"o": [
+"Giovanni Boccaccio",
+"Francesco Petrarca",
+"Dante Alighieri",
+"François Villon"
+],
+"a": "Giovanni Boccaccio",
+"e": "Dekameron je soubor novel Giovanniho Boccaccia.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Kdo napsal Dona Quijota?",
+"o": [
+"Miguel de Cervantes",
+"Daniel Defoe",
+"Jonathan Swift",
+"Voltaire"
+],
+"a": "Miguel de Cervantes",
+"e": "Don Quijote je román Miguela de Cervantese.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Který autor je představitelem francouzského klasicistního dramatu a napsal Lakomce?",
+"o": [
+"Molière",
+"Voltaire",
+"Johann Wolfgang Goethe",
+"William Shakespeare"
+],
+"a": "Molière",
+"e": "Lakomce napsal francouzský dramatik Molière.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Kdo je autorem Robinsona Crusoe?",
+"o": [
+"Daniel Defoe",
+"Jonathan Swift",
+"Miguel de Cervantes",
+"Walter Scott"
+],
+"a": "Daniel Defoe",
+"e": "Robinson Crusoe je román Daniela Defoa.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Který autor napsal Gulliverovy cesty?",
+"o": [
+"Jonathan Swift",
+"Daniel Defoe",
+"Voltaire",
+"Molière"
+],
+"a": "Jonathan Swift",
+"e": "Gulliverovy cesty jsou satirický román Jonathana Swifta.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Kdo je autorem dramatu Romeo a Julie?",
+"o": [
+"William Shakespeare",
+"Molière",
+"Johann Wolfgang Goethe",
+"Sofokles"
+],
+"a": "William Shakespeare",
+"e": "Romeo a Julie je tragédie Williama Shakespeara.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Které dílo je spojeno s Johannem Wolfgangem Goethem?",
+"o": [
+"Utrpení mladého Werthera",
+"Dekameron",
+"Gulliverovy cesty",
+"Lakomce"
+],
+"a": "Utrpení mladého Werthera",
+"e": "Utrpení mladého Werthera je román Goetha a významné dílo preromantismu.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Který autor je známý jako francouzský osvícenský filozof a autor satiry Candide?",
+"o": [
+"Voltaire",
+"Molière",
+"Daniel Defoe",
+"Francesco Petrarca"
+],
+"a": "Voltaire",
+"e": "Candide je satirické dílo Voltaira.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Kdo je autorem básnické sbírky Závěť?",
+"o": [
+"François Villon",
+"Francesco Petrarca",
+"Dante Alighieri",
+"Ovidius"
+],
+"a": "François Villon",
+"e": "François Villon je francouzský středověký básník, autor Závěti.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Který autor je spojován s dílem Píseň o Rolandovi?",
+"o": [
+"Anonymní autor",
+"Giovanni Boccaccio",
+"Homér",
+"Johann Wolfgang Goethe"
+],
+"a": "Anonymní autor",
+"e": "Píseň o Rolandovi je středověký hrdinský epos neznámého autora.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Které dílo patří mezi starozákonní texty?",
+"o": [
+"Bible",
+"Dekameron",
+"Antigona",
+"Don Quijote"
+],
+"a": "Bible",
+"e": "Starý zákon je součástí Bible.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Kdo je autorem eposu o Gilgamešovi?",
+"o": [
+"Anonymní autor",
+"Homér",
+"Ovidius",
+"Ezop"
+],
+"a": "Anonymní autor",
+"e": "Epos o Gilgamešovi je starověké mezopotámské dílo anonymního původu.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Který z autorů je spojen především s renesanční italskou literaturou?",
+"o": [
+"Francesco Petrarca",
+"Molière",
+"Voltaire",
+"Daniel Defoe"
+],
+"a": "Francesco Petrarca",
+"e": "Francesco Petrarca patří k významným autorům italské renesance.",
+"c": "Světová literatura do konce 18. století"
+},
+{
+"q": "Který text je staročeskou legendou o příchodu křesťanství?",
+"o": [
+"Kristiánova legenda",
+"Mastičkář",
+"Kronika tak řečeného Dalimila",
+"Podkoní a žák"
+],
+"a": "Kristiánova legenda",
+"e": "Kristiánova legenda je raně středověký latinský text vztahující se k českým dějinám a světcům.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Které dílo je staročeskou satirickou skladbou s disputací dvou postav?",
+"o": [
+"Podkoní a žák",
+"Kristiánova legenda",
+"Mastičkář",
+"Alexandreis"
+],
+"a": "Podkoní a žák",
+"e": "Podkoní a žák je satirická skladba středověké české literatury.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Kdo je autorem díla Labyrint světa a ráj srdce?",
+"o": [
+"Jan Amos Komenský",
+"Jan Hus",
+"Václav Hájek z Libočan",
+"Bedřich Bridel"
+],
+"a": "Jan Amos Komenský",
+"e": "Labyrint světa a ráj srdce je alegorické dílo Jana Amose Komenského.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Která osobnost je spojena s reformním náboženským učením a upálením v Kostnici roku 1415?",
+"o": [
+"Jan Hus",
+"Jan Amos Komenský",
+"Konstantin",
+"Metoděj"
+],
+"a": "Jan Hus",
+"e": "Jan Hus byl český reformátor a kazatel, upálený v Kostnici roku 1415.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Které dílo je spojeno s Bedřichem Bridel?",
+"o": [
+"Co Bůh? Člověk?",
+"Labyrint světa a ráj srdce",
+"Kristiánova legenda",
+"Kronika tak řečeného Dalimila"
+],
+"a": "Co Bůh? Člověk?",
+"e": "Co Bůh? Člověk? je barokní duchovní skladba Bedřicha Bridela.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Které dílo je staročeskou kronikou?",
+"o": [
+"Kronika tak řečeného Dalimila",
+"Mastičkář",
+"Podkoní a žák",
+"Alexandreis"
+],
+"a": "Kronika tak řečeného Dalimila",
+"e": "Kronika tak řečeného Dalimila je významná staročeská veršovaná kronika.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Který autor napsal kronikářské dílo Kronika česká, známé také jako Hájkova kronika?",
+"o": [
+"Václav Hájek z Libočan",
+"Jan Hus",
+"Jan Amos Komenský",
+"Josef Jungmann"
+],
+"a": "Václav Hájek z Libočan",
+"e": "Václav Hájek z Libočan je autorem Kroniky české.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Které dílo patří do české středověké dramatické tvorby?",
+"o": [
+"Mastičkář",
+"Labyrint světa a ráj srdce",
+"Co Bůh? Člověk?",
+"Král Lávra"
+],
+"a": "Mastičkář",
+"e": "Mastičkář je středověká česká velikonoční hra.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Která osobnost je spojena se staroslověnskou vzdělaností a hlaholicí?",
+"o": [
+"Konstantin a Metoděj",
+"Jan Hus a Jan Amos Komenský",
+"Josef Dobrovský a Josef Jungmann",
+"Karel Hynek Mácha a Karel Jaromír Erben"
+],
+"a": "Konstantin a Metoděj",
+"e": "Konstantin a Metoděj jsou spojeni s příchodem slovanské liturgie a písma na Velkou Moravu.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Který autor napsal epos Alexandreis?",
+"o": [
+"Anonymní autor",
+"Jan Hus",
+"Bedřich Bridel",
+"Václav Hájek z Libočan"
+],
+"a": "Anonymní autor",
+"e": "Alexandreis je středověká veršovaná skladba o Alexandru Velikém, autorství není bezpečně určeno.",
+"c": "Česká literatura do konce 18. století"
+},
+{
+"q": "Kdo je autorem díla Máj?",
+"o": [
+"Karel Hynek Mácha",
+"Karel Jaromír Erben",
+"Jan Neruda",
+"Josef Václav Sládek"
+],
+"a": "Karel Hynek Mácha",
+"e": "Máj je vrcholné dílo českého romantismu od Karla Hynka Máchy.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor napsal Kytici?",
+"o": [
+"Karel Jaromír Erben",
+"Karel Hynek Mácha",
+"Božena Němcová",
+"Jan Neruda"
+],
+"a": "Karel Jaromír Erben",
+"e": "Kytice je sbírka balad Karla Jaromíra Erbena.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Kdo napsal Babičku?",
+"o": [
+"Božena Němcová",
+"Karolina Světlá",
+"Jane Austenová",
+"Jana z Arku"
+],
+"a": "Božena Němcová",
+"e": "Babička je próza Boženy Němcové.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor je známý satirickými skladbami Král Lávra a Tyrolské elegie?",
+"o": [
+"Karel Havlíček Borovský",
+"Jan Neruda",
+"Vítězslav Hálek",
+"Jaroslav Vrchlický"
+],
+"a": "Karel Havlíček Borovský",
+"e": "Obě díla napsal Karel Havlíček Borovský.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Kdo je autorem Povídek malostranských?",
+"o": [
+"Jan Neruda",
+"Alois Jirásek",
+"Karel Havlíček Borovský",
+"Josef Kajetán Tyl"
+],
+"a": "Jan Neruda",
+"e": "Povídky malostranské zachycují život na pražské Malé Straně.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor napsal drama Strakonický dudák?",
+"o": [
+"Josef Kajetán Tyl",
+"Alois Jirásek",
+"Karel Hynek Mácha",
+"Josef Jungmann"
+],
+"a": "Josef Kajetán Tyl",
+"e": "Strakonický dudák je drama Josefa Kajetána Tyla.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor je spojen s historickými romány a dílem Staré pověsti české?",
+"o": [
+"Alois Jirásek",
+"Jan Neruda",
+"Karel Jaromír Erben",
+"Josef Václav Sládek"
+],
+"a": "Alois Jirásek",
+"e": "Alois Jirásek se proslavil historickou prózou a Starými pověstmi českými.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Kdo napsal drama Naši furianti?",
+"o": [
+"Ladislav Stroupežnický",
+"Vilém Mrštík",
+"Josef Kajetán Tyl",
+"Karel Havlíček Borovský"
+],
+"a": "Ladislav Stroupežnický",
+"e": "Naši furianti jsou realistické drama Ladislava Stroupežnického.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor je spojen s básnickým směrem lumírovců?",
+"o": [
+"Jaroslav Vrchlický",
+"Karel Hynek Mácha",
+"Karel Havlíček Borovský",
+"Josef Dobrovský"
+],
+"a": "Jaroslav Vrchlický",
+"e": "Jaroslav Vrchlický patří k lumírovcům.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Kdo napsal dílo Zlomky epopeje?",
+"o": [
+"Jaroslav Vrchlický",
+"Jan Neruda",
+"Vítězslav Hálek",
+"Karel Jaromír Erben"
+],
+"a": "Jaroslav Vrchlický",
+"e": "Zlomky epopeje jsou spojeny s tvorbou Jaroslava Vrchlického.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor napsal dílo Svatý Xaverius?",
+"o": [
+"Jakub Arbes",
+"Alois Jirásek",
+"Josef Václav Sládek",
+"František Ladislav Čelakovský"
+],
+"a": "Jakub Arbes",
+"e": "Svatý Xaverius je romaneto Jakuba Arbesa.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Kdo je autorem sbírky Růže stolistá?",
+"o": [
+"Jaroslav Vrchlický",
+"Karel Hynek Mácha",
+"Jan Neruda",
+"Vítězslav Hálek"
+],
+"a": "Jaroslav Vrchlický",
+"e": "Růže stolistá patří k tvorbě Jaroslava Vrchlického.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor je spojován s dílem Ohlas písní českých?",
+"o": [
+"František Ladislav Čelakovský",
+"Karel Jaromír Erben",
+"Josef Václav Sládek",
+"Karel Havlíček Borovský"
+],
+"a": "František Ladislav Čelakovský",
+"e": "Ohlas písní českých napsal František Ladislav Čelakovský.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Kdo je autorem díla Dějiny národu českého v Čechách a v Moravě?",
+"o": [
+"František Palacký",
+"Josef Dobrovský",
+"Josef Jungmann",
+"Václav Hájek z Libočan"
+],
+"a": "František Palacký",
+"e": "Dějiny národu českého jsou zásadním historickým dílem Františka Palackého.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor napsal dílo Slávy dcera?",
+"o": [
+"Ján Kollár",
+"Karel Hynek Mácha",
+"Jan Neruda",
+"Josef Václav Sládek"
+],
+"a": "Ján Kollár",
+"e": "Slávy dcera je básnická skladba Jána Kollára.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor napsal Chrám Matky Boží v Paříži?",
+"o": [
+"Victor Hugo",
+"Alexandr Sergejevič Puškin",
+"Walter Scott",
+"Alexandre Dumas"
+],
+"a": "Victor Hugo",
+"e": "Román Chrám Matky Boží v Paříži napsal Victor Hugo.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Kdo napsal Tři mušketýry?",
+"o": [
+"Alexandre Dumas",
+"Walter Scott",
+"Victor Hugo",
+"Edgar Allan Poe"
+],
+"a": "Alexandre Dumas",
+"e": "Tři mušketýři jsou dobrodružný historický román Alexandra Dumase.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Který autor napsal Havrana?",
+"o": [
+"Edgar Allan Poe",
+"Walt Whitman",
+"Charles Dickens",
+"Oscar Wilde"
+],
+"a": "Edgar Allan Poe",
+"e": "Havran je známá báseň Edgara Allana Poea.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Kdo napsal Pýchu a předsudek?",
+"o": [
+"Jane Austenová",
+"Charlotte Brontëová",
+"George Sandová",
+"Gustave Flaubert"
+],
+"a": "Jane Austenová",
+"e": "Pýchu a předsudek napsala Jane Austenová.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Který autor je spojen s románem Paní Bovaryová?",
+"o": [
+"Gustave Flaubert",
+"Honoré de Balzac",
+"Lev Nikolajevič Tolstoj",
+"Charles Dickens"
+],
+"a": "Gustave Flaubert",
+"e": "Paní Bovaryová je román Gustava Flauberta.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Kdo napsal Vojnu a mír?",
+"o": [
+"Lev Nikolajevič Tolstoj",
+"Fjodor Michajlovič Dostojevskij",
+"Ivan Sergejevič Turgeněv",
+"Nikolaj Vasiljevič Gogol"
+],
+"a": "Lev Nikolajevič Tolstoj",
+"e": "Vojna a mír je rozsáhlý historický román Lva Nikolajeviče Tolstého.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Který autor napsal Zločin a trest?",
+"o": [
+"Fjodor Michajlovič Dostojevskij",
+"Lev Nikolajevič Tolstoj",
+"Anton Pavlovič Čechov",
+"Ivan Sergejevič Turgeněv"
+],
+"a": "Fjodor Michajlovič Dostojevskij",
+"e": "Zločin a trest je psychologický román Dostojevského.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Kdo napsal Evžena Oněgina?",
+"o": [
+"Alexandr Sergejevič Puškin",
+"Nikolaj Vasiljevič Gogol",
+"Ivan Sergejevič Turgeněv",
+"Walter Scott"
+],
+"a": "Alexandr Sergejevič Puškin",
+"e": "Evžen Oněgin je veršovaný román Alexandra Sergejeviče Puškina.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Který autor napsal Olivera Twista?",
+"o": [
+"Charles Dickens",
+"Walter Scott",
+"Alexandre Dumas",
+"Émile Zola"
+],
+"a": "Charles Dickens",
+"e": "Oliver Twist je román Charlese Dickense.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Kdo je autorem románu Germinal?",
+"o": [
+"Émile Zola",
+"Gustave Flaubert",
+"Oscar Wilde",
+"Henrik Ibsen"
+],
+"a": "Émile Zola",
+"e": "Germinal je významný naturalistický román Émila Zoly.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Který autor napsal Paní Bovaryovou, nikoli Zločin a trest?",
+"o": [
+"Gustave Flaubert",
+"Fjodor Michajlovič Dostojevskij",
+"Lev Nikolajevič Tolstoj",
+"Nikolaj Vasiljevič Gogol"
+],
+"a": "Gustave Flaubert",
+"e": "Paní Bovaryová je dílem Gustava Flauberta.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Kdo napsal drama Nora (Domeček pro panenky)?",
+"o": [
+"Henrik Ibsen",
+"Anton Pavlovič Čechov",
+"Oscar Wilde",
+"Victor Hugo"
+],
+"a": "Henrik Ibsen",
+"e": "Nora je drama norského dramatika Henrika Ibsena.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Který autor napsal Višňový sad?",
+"o": [
+"Anton Pavlovič Čechov",
+"Henrik Ibsen",
+"Alexandre Dumas",
+"Walter Scott"
+],
+"a": "Anton Pavlovič Čechov",
+"e": "Višňový sad je drama Antona Pavloviče Čechova.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Kdo napsal Obraz Doriana Graye?",
+"o": [
+"Oscar Wilde",
+"Charles Baudelaire",
+"Jean Arthur Rimbaud",
+"Walt Whitman"
+],
+"a": "Oscar Wilde",
+"e": "Obraz Doriana Graye je román Oscara Wilda.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Který básník je autorem sbírky Opilý koráb?",
+"o": [
+"Jean Arthur Rimbaud",
+"Charles Baudelaire",
+"Walt Whitman",
+"Edgar Allan Poe"
+],
+"a": "Jean Arthur Rimbaud",
+"e": "Opilý koráb je báseň Arthura Rimbauda.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Kdo napsal Listy trávy?",
+"o": [
+"Walt Whitman",
+"Jean Arthur Rimbaud",
+"Edgar Allan Poe",
+"Oscar Wilde"
+],
+"a": "Walt Whitman",
+"e": "Listy trávy jsou básnickou sbírkou Walta Whitmana.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Který z autorů tvořil v antice, nikoli v 19. století?",
+"o": [
+"Sofokles",
+"Charles Dickens",
+"Victor Hugo",
+"Oscar Wilde"
+],
+"a": "Sofokles",
+"e": "Sofokles je autor antiky; ostatní autoři jsou spojeni s 19. stoletím.",
+"c": "Literární období"
+},
+{
+"q": "Který z autorů patří do renesance, zatímco ostatní jsou představiteli 19. století?",
+"o": [
+"Giovanni Boccaccio",
+"Victor Hugo",
+"Charles Dickens",
+"Oscar Wilde"
+],
+"a": "Giovanni Boccaccio",
+"e": "Boccaccio tvořil ve 14. století.",
+"c": "Literární období"
+},
+{
+"q": "Která dvojice autorů patří do českého romantismu?",
+"o": [
+"Karel Hynek Mácha a Karel Jaromír Erben",
+"Jan Neruda a Jaroslav Vrchlický",
+"Josef Dobrovský a Josef Jungmann",
+"Alois Jirásek a Vilém Mrštík"
+],
+"a": "Karel Hynek Mácha a Karel Jaromír Erben",
+"e": "Mácha a Erben jsou významní autoři českého romantismu.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Který autor je časově nejstarší?",
+"o": [
+"Homér",
+"William Shakespeare",
+"Molière",
+"Johann Wolfgang Goethe"
+],
+"a": "Homér",
+"e": "Homér je spojován s archaickým Řeckem, výrazně předchází ostatním uvedeným autorům.",
+"c": "Literární období"
+},
+{
+"q": "Který z autorů žil převážně v 19. století?",
+"o": [
+"Karel Hynek Mácha",
+"Jan Amos Komenský",
+"Molière",
+"Giovanni Boccaccio"
+],
+"a": "Karel Hynek Mácha",
+"e": "Karel Hynek Mácha žil v letech 1810–1836.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento antický dramatik napsal tragédii Antigona. Jde o autora jménem ________.",
+"o": [
+"Sofokles",
+"Homér",
+"Ovidius",
+"Ezop"
+],
+"a": "Sofokles",
+"e": "Antigonu napsal Sofokles.",
+"c": "Medailonek"
+},
+{
+"q": "Tento italský renesanční autor napsal soubor novel Dekameron. Jde o autora jménem ________.",
+"o": [
+"Giovanni Boccaccio",
+"Francesco Petrarca",
+"Dante Alighieri",
+"Miguel de Cervantes"
+],
+"a": "Giovanni Boccaccio",
+"e": "Dekameron napsal Giovanni Boccaccio.",
+"c": "Medailonek"
+},
+{
+"q": "Tento český básník je autorem Máje a bývá řazen k romantismu. Jde o autora jménem ________.",
+"o": [
+"Karel Hynek Mácha",
+"Karel Jaromír Erben",
+"Jan Neruda",
+"Vítězslav Hálek"
+],
+"a": "Karel Hynek Mácha",
+"e": "Máj napsal Karel Hynek Mácha.",
+"c": "Medailonek"
+},
+{
+"q": "Tento ruský autor napsal román Zločin a trest. Jde o autora jménem ________.",
+"o": [
+"Fjodor Michajlovič Dostojevskij",
+"Lev Nikolajevič Tolstoj",
+"Nikolaj Vasiljevič Gogol",
+"Anton Pavlovič Čechov"
+],
+"a": "Fjodor Michajlovič Dostojevskij",
+"e": "Zločin a trest napsal Dostojevskij.",
+"c": "Medailonek"
+},
+{
+"q": "Tento francouzský autor napsal román Chrám Matky Boží v Paříži. Jde o autora jménem ________.",
+"o": [
+"Victor Hugo",
+"Alexandre Dumas",
+"Gustave Flaubert",
+"Émile Zola"
+],
+"a": "Victor Hugo",
+"e": "Román napsal Victor Hugo.",
+"c": "Medailonek"
+},
+{
+"q": "Tento český spisovatel napsal satirické skladby Král Lávra a Tyrolské elegie. Jde o autora jménem ________.",
+"o": [
+"Karel Havlíček Borovský",
+"Jan Neruda",
+"Josef Kajetán Tyl",
+"Karel Hynek Mácha"
+],
+"a": "Karel Havlíček Borovský",
+"e": "Obě skladby napsal Karel Havlíček Borovský.",
+"c": "Medailonek"
+},
+{
+"q": "Tento český autor tvořil v první polovině 19. století a ve své tvorbě je spojován s krajinou kolem hradu Bezděz. O kterého autora jde?",
+"o": [
+"Karel Hynek Mácha",
+"Karel Jaromír Erben",
+"Jan Neruda",
+"Josef Kajetán Tyl"
+],
+"a": "Karel Hynek Mácha",
+"e": "Karel Hynek Mácha; krajina kolem Bezdězu a Máchovo putování se promítají do jeho romantické tvorby.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český autor tvořil ve 2. polovině 19. století, působil jako publicista a psal fejetony. Jeho první básnická sbírka Hřbitovní kvítí se nedočkala valného ohlasu. O koho jde?",
+"o": [
+"Jan Neruda",
+"Vítězslav Hálek",
+"Jaroslav Vrchlický",
+"Karel Havlíček Borovský"
+],
+"a": "Jan Neruda",
+"e": "Jan Neruda; jeho první sbírka Hřbitovní kvítí vyšla roku 1858 a setkala se s nepříznivým přijetím.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český básník a prozaik vydal sbírku Kytice, v níž zpracoval motivy lidové slovesnosti a baladické příběhy. O koho jde?",
+"o": [
+"Karel Jaromír Erben",
+"Karel Hynek Mácha",
+"Jan Neruda",
+"Josef Václav Sládek"
+],
+"a": "Karel Jaromír Erben",
+"e": "Karel Jaromír Erben; Kytice je sbírka balad inspirovaných lidovou slovesností.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český spisovatel a novinář kritizoval rakouskou monarchii a proslul satirickými skladbami Král Lávra a Tyrolské elegie. O koho jde?",
+"o": [
+"Karel Havlíček Borovský",
+"Jan Neruda",
+"Josef Kajetán Tyl",
+"František Ladislav Čelakovský"
+],
+"a": "Karel Havlíček Borovský",
+"e": "Karel Havlíček Borovský; významný novinář, satirik a kritik politických poměrů.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český spisovatel je autorem prózy Babička, která idealizuje venkovský život a zachycuje postavu moudré babičky. O koho jde?",
+"o": [
+"Božena Němcová",
+"Karolina Světlá",
+"Jane Austenová",
+"Karel Jaromír Erben"
+],
+"a": "Božena Němcová",
+"e": "Božena Němcová; autorka Babičky a významná osobnost české literatury 19. století.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český dramatik a prozaik je autorem hry Strakonický dudák. Ve své tvorbě zdůrazňoval vlastenectví a sociální témata. O koho jde?",
+"o": [
+"Josef Kajetán Tyl",
+"Alois Jirásek",
+"Karel Hynek Mácha",
+"Jan Neruda"
+],
+"a": "Josef Kajetán Tyl",
+"e": "Josef Kajetán Tyl; autor dramat Strakonický dudák a Fidlovačka.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český básník a překladatel patřil k lumírovcům a proslul rozsáhlou básnickou tvorbou, včetně cyklu Zlomky epopeje. O koho jde?",
+"o": [
+"Jaroslav Vrchlický",
+"Jan Neruda",
+"Karel Jaromír Erben",
+"Josef Dobrovský"
+],
+"a": "Jaroslav Vrchlický",
+"e": "Jaroslav Vrchlický; významný představitel lumírovců.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český spisovatel a novinář je známý realistickými prózami z pražského prostředí. Jeho dílo Povídky malostranské zachycuje obyvatele Malé Strany. O koho jde?",
+"o": [
+"Jan Neruda",
+"Karel Havlíček Borovský",
+"Alois Jirásek",
+"Josef Kajetán Tyl"
+],
+"a": "Jan Neruda",
+"e": "Jan Neruda; autor Povídek malostranských a fejetonů.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český historik a spisovatel je autorem Starých pověstí českých a řady historických románů, například Psohlavců. O koho jde?",
+"o": [
+"Alois Jirásek",
+"Jan Neruda",
+"Josef Jungmann",
+"Václav Hájek z Libočan"
+],
+"a": "Alois Jirásek",
+"e": "Alois Jirásek; významný autor historické prózy.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český jazykovědec se významně zasloužil o rozvoj novočeského jazyka a sestavil Slovník česko-německý. O koho jde?",
+"o": [
+"Josef Jungmann",
+"Josef Dobrovský",
+"Karel Hynek Mácha",
+"František Ladislav Čelakovský"
+],
+"a": "Josef Jungmann",
+"e": "Josef Jungmann; významná osobnost českého národního obrození.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento český spisovatel a dramatik je spojován s realistickým dramatem Maryša, které napsal společně se svým bratrem Aloisem. Který z uvedených autorů je jeho spoluautorem?",
+"o": [
+"Vilém Mrštík",
+"Alois Jirásek",
+"Josef Kajetán Tyl",
+"Jan Neruda"
+],
+"a": "Vilém Mrštík",
+"e": "Vilém Mrštík; Maryšu napsal společně s bratrem Aloisem Mrštíkem.",
+"c": "Česká literatura 19. století"
+},
+{
+"q": "Tento anglický spisovatel je autorem románu Pýcha a předsudek. Ve svých prózách s ironií zachycuje společenské vztahy a postavení žen. O koho jde?",
+"o": [
+"Jane Austenová",
+"Charlotte Brontëová",
+"George Gordon Byron",
+"Walter Scott"
+],
+"a": "Jane Austenová",
+"e": "Jane Austenová; autorka románu Pýcha a předsudek.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Tento francouzský spisovatel je autorem románu Paní Bovaryová, který bývá spojován s realismem. O koho jde?",
+"o": [
+"Gustave Flaubert",
+"Honoré de Balzac",
+"Émile Zola",
+"Victor Hugo"
+],
+"a": "Gustave Flaubert",
+"e": "Gustave Flaubert; autor románu Paní Bovaryová.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Tento ruský spisovatel napsal romány Vojna a mír a Anna Kareninová. Ve své tvorbě zachycuje ruskou společnost a morální dilemata postav. O koho jde?",
+"o": [
+"Lev Nikolajevič Tolstoj",
+"Fjodor Michajlovič Dostojevskij",
+"Nikolaj Vasiljevič Gogol",
+"Anton Pavlovič Čechov"
+],
+"a": "Lev Nikolajevič Tolstoj",
+"e": "Lev Nikolajevič Tolstoj; autor románů Vojna a mír a Anna Kareninová.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Tento ruský spisovatel a dramatik napsal Revizora, satirickou komedii kritizující úřednictvo a korupci. O koho jde?",
+"o": [
+"Nikolaj Vasiljevič Gogol",
+"Anton Pavlovič Čechov",
+"Fjodor Michajlovič Dostojevskij",
+"Lev Nikolajevič Tolstoj"
+],
+"a": "Nikolaj Vasiljevič Gogol",
+"e": "Nikolaj Vasiljevič Gogol; autor satirické komedie Revizor.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Tento francouzský spisovatel je autorem románu Germinal a významným představitelem naturalismu. O koho jde?",
+"o": [
+"Émile Zola",
+"Gustave Flaubert",
+"Victor Hugo",
+"Alexandre Dumas"
+],
+"a": "Émile Zola",
+"e": "Émile Zola; autor naturalistického románu Germinal.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Tento norský dramatik napsal hru Nora (Domeček pro panenky), která zpochybňuje tradiční postavení ženy v manželství. O koho jde?",
+"o": [
+"Henrik Ibsen",
+"Anton Pavlovič Čechov",
+"Oscar Wilde",
+"Victor Hugo"
+],
+"a": "Henrik Ibsen",
+"e": "Henrik Ibsen; autor moderního realistického dramatu Nora.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Tento americký spisovatel je autorem básnické sbírky Listy trávy a patří k významným osobnostem americké poezie 19. století. O koho jde?",
+"o": [
+"Walt Whitman",
+"Edgar Allan Poe",
+"Jean Arthur Rimbaud",
+"Charles Baudelaire"
+],
+"a": "Walt Whitman",
+"e": "Walt Whitman; autor sbírky Listy trávy.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Tento francouzský básník napsal sbírku Květy zla. Jeho poezie ovlivnila symbolismus a bývá spojována s prokletými básníky. O koho jde?",
+"o": [
+"Charles Baudelaire",
+"Jean Arthur Rimbaud",
+"Walt Whitman",
+"Oscar Wilde"
+],
+"a": "Charles Baudelaire",
+"e": "Charles Baudelaire; autor sbírky Květy zla.",
+"c": "Světová literatura 19. století"
+},
+{
+"q": "Tento irský spisovatel napsal román Obraz Doriana Graye a komedii Jak je důležité míti Filipa. O koho jde?",
+"o": [
+"Oscar Wilde",
+"Charles Baudelaire",
+"Edgar Allan Poe",
+"Henrik Ibsen"
+],
+"a": "Oscar Wilde",
+"e": "Oscar Wilde; představitel esteticismu a autor Obrazu Doriana Graye.",
+"c": "Světová literatura 19. století"
+}
+];
+const $=id=>document.getElementById(id);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+let pool=[],idx=0,right=0,answered=false,name="",catName="",sending=false;
+const cats=[...new Set(DB.map(d=>d.c))];
+$("cat").innerHTML='<option value="">Všechny okruhy ('+DB.length+')</option>'+cats.map(c=>'<option>'+c+'</option>').join("");
+function show(id){["start","quiz","end"].forEach(x=>$(x).classList.toggle("hide",x!==id))}
+
+function start(){
+  name=$("name").value.trim();
+  if(!name){$("err").textContent="Napiš prosím své jméno.";return}
+  $("err").textContent="";
+  catName=$("cat").value;
+  pool=shuffle(DB.filter(d=>!catName||d.c===catName));
+  const n=+$("cnt").value;
+  if(n>0)pool=pool.slice(0,n);
+  idx=0;right=0;show("quiz");render();
+}
+function render(){
+  answered=false;const it=pool[idx];
+  $("num").textContent="Otázka "+(idx+1)+" / "+pool.length;
+  $("score").textContent="Body: "+right;
+  $("prog").style.width=(idx/pool.length*100)+"%";
+  $("qtext").textContent=it.q;$("fb").textContent="";$("ex").textContent="";
+  $("next").classList.add("hide");
+  $("next").textContent=idx===pool.length-1?"Zobrazit výsledek":"Další otázka";
+  const box=$("opts");box.innerHTML="";
+  shuffle(it.o).forEach(t=>{const b=document.createElement("button");b.className="opt";b.textContent=t;b.onclick=()=>answer(b,t,it);box.appendChild(b)});
+}
+function answer(btn,t,it){
+  if(answered)return;answered=true;
+  document.querySelectorAll(".opt").forEach(b=>{b.disabled=true;if(b.textContent===it.a)b.classList.add("ok")});
+  if(t===it.a){right++;$("fb").textContent="Správně!";$("fb").style.color="var(--ok)"}
+  else{btn.classList.add("bad");$("fb").textContent="Chyba. Správně: "+it.a;$("fb").style.color="var(--bad)"}
+  $("ex").textContent=it.e||"";
+  $("score").textContent="Body: "+right;$("next").classList.remove("hide");
+}
+async function next(){
+  idx++;if(idx<pool.length){render();return}
+  const p=Math.round(right/pool.length*100);
+  $("who").textContent=name;$("final").textContent=right+" / "+pool.length+" ("+p+" %)";
+  show("end");
+  const rec={name,cat:catName||"Všechny okruhy",score:right,total:pool.length,pct:p,date:new Date().toISOString()};
+  const manual=name+", "+right+"/"+pool.length+" ("+p+" %), "+new Date().toLocaleDateString("cs-CZ");
+  if(!SHEETS_URL){$("saved").textContent="Výsledek (opiš ho učiteli): "+manual;return}
+  $("saved").textContent="Odesílám výsledek…";
+  try{
+    await fetch(SHEETS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(rec)});
+    $("saved").textContent="Výsledek byl odeslán učiteli.";
+  }catch(e){
+    $("saved").textContent="Odeslání se nepodařilo. Opiš výsledek učiteli: "+manual;
+  }
+}
+</script>
+</body>
+</html>
